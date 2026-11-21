@@ -83,6 +83,14 @@ Model metadata carries its privacy classification from snapshot capture to remot
 
 Run `python3 -m unittest test_runner_local_rpc test_runner_remote_rpc test_runner_event_delivery test_runner_usage_receipts test_runner_input_cleanup test_local_process_cleanup test_task_goal_stop_races` in the backend test environment. The private-pipe test uses a real Runner process and durable queue with synthetic discovery; process-cleanup tests use isolated operating-system children. These checks do not establish real-provider or Windows acceptance when run on another platform.
 
+## Plugin governance counts
+
+In `GET /api/v1/admin/plugins/governance`, `summary.total`, `summary.available`, `summary.pendingReview` and `summary.attention` count distinct plugins in the caller's organization scope. A plugin with any quarantined version is pending review, even when its latest version is approved; publication and review filters can therefore overlap.
+
+`summary.pendingReviewVersions` and `counts.review` count pending versions. `summary.attentionItems` and the other `counts` fields count actionable items. These counts are computed before each `queues` preview is limited to 30 items. `pluginCounts` supplies each visible plugin's review-version and attention-item counts so catalog filters and badges do not depend on preview membership. Review entries retain their `versionId`; the plugin detail's version list provides all versions. The existing limits of 1,000 recent evaluations and 500 runs from the last 30 days still apply to quality and runtime data.
+
+Run `python3 -m unittest test_plugin_access` for scoped API regressions and `node --test tests/plugin-catalog-model.test.mjs` in `hub-frontend/` for catalog counting and filtering regressions.
+
 ## Offline quality gate
 
 Native requirement preparation can save `executionSubmissionChoice` independently of the effective `executionSubmissionMode`. For the `infer` choice, completed and validated primary artifacts resolve the mode to automatic review submission; explicit manual and ambiguous legacy manual values retain their behavior. Review remains a human action owned by the requirement creator. Current-turn delivery issues expose interrupted capture, invalid output or an unavailable creator without changing approval permissions. Upgrade desktop and Hub together for the new choice acknowledgment and issue receipts.

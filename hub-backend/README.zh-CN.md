@@ -66,6 +66,14 @@ Runner 重启后，恢复终端仍绑定原执行的会话历史，不恢复模�
 
 在后端测试环境运行 `python3 -m unittest test_runner_local_rpc test_runner_remote_rpc test_runner_event_delivery test_runner_usage_receipts test_runner_input_cleanup test_local_process_cleanup test_task_goal_stop_races`。私有管道测试使用真实 Runner 进程和持久队列，底座检测为模拟；进程清理测试使用隔离的操作系统子进程。在其他平台运行这些检查，不代表已完成真实模型或 Windows 验收。
 
+## 插件治理统计口径
+
+`GET /api/v1/admin/plugins/governance` 中的 `summary.total`、`summary.available`、`summary.pendingReview` 和 `summary.attention` 按调用者组织范围内的插件去重计数。插件只要有任一隔离待审版本，就计入待审核，即使最新版本已经批准；因此上架状态与待审核筛选可以重叠。
+
+`summary.pendingReviewVersions` 和 `counts.review` 统计待审核版本数；`summary.attentionItems` 和其他 `counts` 字段统计待处理事项数。这些数量在每类 `queues` 预览截取 30 条之前计算。`pluginCounts` 提供每个可见插件的待审核版本数和待处理事项数，目录筛选与角标不依赖插件是否进入预览。审核项保留各自的 `versionId`，插件详情的版本列表仍提供全部版本。质量与运行数据继续遵循现有范围：最近 1,000 条评测，以及近 30 天内最近 500 次运行。
+
+运行 `python3 -m unittest test_plugin_access` 验证组织范围与 API 统计，在 `hub-frontend/` 中运行 `node --test tests/plugin-catalog-model.test.mjs` 验证目录计数和筛选。
+
 ## 质量门禁
 
 本机需求准备阶段将 `executionSubmissionChoice` 与实际的 `executionSubmissionMode` 分开保存。选择自动判断时，本轮完成且校验通过的正式成果会触发自动提交验收；明确手动及来源不明的历史手动值保持原行为。验收仍由需求创建人执行。本轮交付问题会显示采集中断、成果无效或创建人不可用，不改变审批权限。新的策略确认和问题回执需要桌面与 Hub 一起更新。

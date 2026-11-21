@@ -73,7 +73,7 @@ export function pluginIssues(queues = {}) {
   return result
 }
 
-export function selectCatalog(items = [], queues = {}, filters = {}) {
+export function selectCatalog(items = [], queues = {}, filters = {}, pluginCounts = {}) {
   const { query = '', status = 'all', source = 'all', kind = 'all', category = 'all', sort = 'updated', catalogType = 'all' } = filters
   const issues = pluginIssues(queues)
   const needle = query.trim().toLocaleLowerCase()
@@ -81,6 +81,10 @@ export function selectCatalog(items = [], queues = {}, filters = {}) {
     plugin, source: pluginSource(plugin), kind: pluginKind(plugin),
     category: String(plugin.catalogPolicy?.category || 'general'),
     publication: pluginPublication(plugin), issues: issues[plugin.id] || [],
+    issueCount: pluginCounts[plugin.id]?.attention ?? (issues[plugin.id] || []).length,
+    pendingVersionCount: pluginCounts[plugin.id]?.review ?? Math.max(
+      (issues[plugin.id] || []).filter(item => item.kind === 'review').length,
+      pluginPublication(plugin).key === 'pending' ? 1 : 0),
   })).filter((row) => {
     if (catalogType === 'app' && row.kind.key !== 'app') return false
     if (catalogType === 'plugin' && row.kind.key === 'app') return false
@@ -96,7 +100,8 @@ export function selectCatalog(items = [], queues = {}, filters = {}) {
   })
   const matchesStatus = (row, key) => key === 'all' || (key === 'featured'
     ? Boolean(row.plugin.catalogPolicy?.featured)
-    : key === 'attention' ? row.issues.length > 0 : row.publication.key === key)
+    : key === 'attention' ? row.issueCount > 0
+      : key === 'pending' ? row.pendingVersionCount > 0 : row.publication.key === key)
   const counts = Object.fromEntries(CATALOG_FILTERS.map(([key]) => [key, rows.filter((row) => matchesStatus(row, key)).length]))
   const shown = rows.filter((row) => matchesStatus(row, status))
   shown.sort((a, b) => {
